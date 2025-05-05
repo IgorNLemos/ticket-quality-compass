@@ -1,4 +1,3 @@
-
 import { TicketMetadata, TicketEvaluation, EvaluationCriteria, EvaluationHistory, AnalyticsData, AnalyticsFilter, ExportFormat } from '../types';
 
 // Mock data for development
@@ -129,7 +128,7 @@ export const getExistingEvaluation = async (ticketId: string): Promise<TicketEva
   await new Promise(resolve => setTimeout(resolve, 300));
   
   // Find existing evaluation for this ticket
-  const evaluation = MOCK_EVALUATIONS.find(eval => eval.ticketId === ticketId);
+  const evaluation = MOCK_EVALUATIONS.find(item => item.ticketId === ticketId);
   return evaluation || null;
 };
 
@@ -142,7 +141,7 @@ export const getEvaluationHistory = async (
   await new Promise(resolve => setTimeout(resolve, 400));
   
   // Filter evaluations for this ticket
-  const evaluations = MOCK_EVALUATIONS.filter(eval => eval.ticketId === ticketId);
+  const evaluations = MOCK_EVALUATIONS.filter(evaluation => evaluation.ticketId === ticketId);
   
   return {
     evaluations: evaluations.slice((page - 1) * pageSize, page * pageSize),
@@ -181,7 +180,7 @@ export const saveEvaluation = async (evaluation: Partial<TicketEvaluation>): Pro
   if (isNewEvaluation) {
     MOCK_EVALUATIONS.push(newEvaluation);
   } else {
-    const index = MOCK_EVALUATIONS.findIndex(eval => eval.id === newEvaluation.id);
+    const index = MOCK_EVALUATIONS.findIndex(evaluation => evaluation.id === newEvaluation.id);
     if (index >= 0) {
       MOCK_EVALUATIONS[index] = newEvaluation;
     } else {

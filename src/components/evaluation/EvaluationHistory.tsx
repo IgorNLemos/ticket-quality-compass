@@ -100,18 +100,18 @@ const EvaluationHistory: React.FC<EvaluationHistoryProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {history.map((eval) => (
-                  <TableRow key={eval.id}>
-                    <TableCell>{formatDate(eval.timestamp)}</TableCell>
-                    <TableCell>{eval.evaluatorDisplayName}</TableCell>
+                {history.map((evaluation) => (
+                  <TableRow key={evaluation.id}>
+                    <TableCell>{formatDate(evaluation.timestamp)}</TableCell>
+                    <TableCell>{evaluation.evaluatorDisplayName}</TableCell>
                     <TableCell className="text-center font-medium">
-                      {eval.averageScore.toFixed(1)}
+                      {evaluation.averageScore.toFixed(1)}
                     </TableCell>
                     <TableCell>
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleViewDetails(eval)}
+                        onClick={() => handleViewDetails(evaluation)}
                       >
                         View Details
                       </Button>
