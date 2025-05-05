@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,16 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Atlassian colors
+				atlaskit: {
+					blue: '#0052CC',
+					purple: '#6554C0',
+					teal: '#00B8D9',
+					red: '#FF5630',
+					yellow: '#FFAB00',
+					green: '#36B37E',
+					neutral: '#42526E'
 				}
 			},
 			borderRadius: {
