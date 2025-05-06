@@ -1,175 +1,269 @@
-
-import React, { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
-import { AnalyticsFilter, AnalyticsData, ExportFormat } from '@/types';
+// Import from the new services structure
 import { getAnalyticsData, exportData } from '@/services';
-import OverviewTab from './analytics/OverviewTab';
-import CriteriaTab from './analytics/CriteriaTab';
-import AssigneeTab from './analytics/AssigneeTab';
-import DataTab from './analytics/DataTab';
+import { AnalyticsData, AnalyticsFilter, ExportFormat } from '@/types';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
+import { CalendarIcon, ArrowDownToLine, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { format } from 'date-fns';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js';
+import { Bar, Pie } from 'react-chartjs-2';
 
-const defaultFilters: AnalyticsFilter = {
-  dateRange: [null, null],
-  assignees: [],
-  evaluators: [],
-  ticketTypes: [],
-  projects: [],
-  criteriaScoreRanges: {}
-};
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
-const AnalyticsDashboard: React.FC = () => {
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+const AnalyticsDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-  const [filters, setFilters] = useState<AnalyticsFilter>(defaultFilters);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
-  
+  const [filters, setFilters] = useState<AnalyticsFilter>({
+    startDate: null,
+    endDate: null,
+    category: 'all'
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
+
   useEffect(() => {
-    loadAnalyticsData();
-  }, []);
-  
-  const loadAnalyticsData = async () => {
-    try {
+    const loadAnalyticsData = async () => {
       setIsLoading(true);
-      const data = await getAnalyticsData(filters);
-      setAnalyticsData(data);
-    } catch (error) {
-      console.error('Error loading analytics data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load analytics data. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      try {
+        const data = await getAnalyticsData(filters);
+        setAnalyticsData(data);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        // Handle error appropriately (e.g., show a toast)
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAnalyticsData();
+  }, [filters]);
+
+  const handleFilterChange = (newFilters: Partial<AnalyticsFilter>) => {
+    setFilters({ ...filters, ...newFilters });
   };
-  
+
   const handleExport = async () => {
+    setExporting(true);
     try {
       await exportData(filters, exportFormat);
-      toast({
-        title: 'Export Started',
-        description: `Your data is being exported in ${exportFormat} format.`,
-      });
     } catch (error) {
       console.error('Error exporting data:', error);
-      toast({
-        title: 'Export Failed',
-        description: 'Failed to export data. Please try again.',
-        variant: 'destructive',
-      });
+      // Handle error appropriately (e.g., show a toast)
+    } finally {
+      setExporting(false);
     }
   };
-  
+
+  // Prepare chart data
+  const evaluationsByDayData = {
+    labels: analyticsData?.overviewStats.evaluationsByDay.map(item => item.date),
+    datasets: [
+      {
+        label: 'Evaluations',
+        data: analyticsData?.overviewStats.evaluationsByDay.map(item => item.count),
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+      },
+    ],
+  };
+
+  const scoreDistributionData = {
+    labels: analyticsData?.overviewStats.scoreDistribution.map(item => item.score),
+    datasets: [
+      {
+        label: 'Score Distribution',
+        data: analyticsData?.overviewStats.scoreDistribution.map(item => item.count),
+        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+      },
+    ],
+  };
+
+  const criteriaAverages = analyticsData?.criteriaStats ? Object.entries(analyticsData.criteriaStats).map(([criteria, data]) => ({
+    criteria,
+    averageScore: data.averageScore,
+  })) : [];
+
+  const criteriaPieChartData = {
+    labels: criteriaAverages?.map(item => item.criteria),
+    datasets: [
+      {
+        label: 'Average Score',
+        data: criteriaAverages?.map(item => item.averageScore),
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 206, 86, 0.6)',
+          'rgba(75, 192, 192, 0.6)',
+          'rgba(153, 102, 255, 0.6)',
+          'rgba(255, 159, 64, 0.6)',
+        ],
+      },
+    ],
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold">Ticket Quality Analytics</h2>
-        <div className="flex items-center space-x-2">
-          <Select 
-            value={exportFormat} 
-            onValueChange={(value) => setExportFormat(value as ExportFormat)}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Export As" />
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
+        <div className="space-x-2">
+          <DatePicker
+            mode="range"
+            defaultMonth={filters.startDate}
+            onSelect={(date) => handleFilterChange({ startDate: date?.from || null, endDate: date?.to || null })}
+          />
+          <Select onValueChange={(value) => handleFilterChange({ category: value })}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select a category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="excel">Excel</SelectItem>
-              <SelectItem value="csv">CSV</SelectItem>
-              <SelectItem value="pdf">PDF Report</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="category1">Category 1</SelectItem>
+              <SelectItem value="category2">Category 2</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleExport}>Export</Button>
+          <Button variant="outline" disabled={exporting} onClick={handleExport}>
+            {exporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                Export Data
+                <ArrowDownToLine className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+          <Select onValueChange={setExportFormat}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Select format" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="csv">CSV</SelectItem>
+              <SelectItem value="excel">Excel</SelectItem>
+              <SelectItem value="pdf">PDF</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-          <CardDescription>Refine the analytics data display</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="date-range">Date Range</Label>
-            <Select disabled>
-              <SelectTrigger id="date-range">
-                <SelectValue placeholder="Last 30 days" />
-              </SelectTrigger>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="assignees">Assignees</Label>
-            <Select disabled>
-              <SelectTrigger id="assignees">
-                <SelectValue placeholder="All assignees" />
-              </SelectTrigger>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="projects">Projects</Label>
-            <Select disabled>
-              <SelectTrigger id="projects">
-                <SelectValue placeholder="All projects" />
-              </SelectTrigger>
-            </Select>
-          </div>
-          
-          <div className="md:col-span-3">
-            <Button 
-              onClick={loadAnalyticsData} 
-              disabled={isLoading} 
-              className="w-full"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Apply Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
+
       {isLoading ? (
-        <div className="flex justify-center items-center p-20">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="flex justify-center items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : analyticsData ? (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="criteria">By Criteria</TabsTrigger>
-            <TabsTrigger value="assignee">By Assignee</TabsTrigger>
-            <TabsTrigger value="data">Raw Data</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="overview" className="pt-4">
-            <OverviewTab data={analyticsData.overviewStats} />
-          </TabsContent>
-          
-          <TabsContent value="criteria" className="pt-4">
-            <CriteriaTab data={analyticsData.criteriaStats} />
-          </TabsContent>
-          
-          <TabsContent value="assignee" className="pt-4">
-            <AssigneeTab data={analyticsData.assigneeStats} />
-          </TabsContent>
-          
-          <TabsContent value="data" className="pt-4">
-            <DataTab data={analyticsData.rawData} />
-          </TabsContent>
-        </Tabs>
       ) : (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">No analytics data available.</p>
-        </Card>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Total Evaluations</CardTitle>
+                <CardDescription>Number of evaluations submitted</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analyticsData?.overviewStats.totalEvaluations}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Average Score</CardTitle>
+                <CardDescription>Average score across all evaluations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{analyticsData?.overviewStats.averageScore?.toFixed(1)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Evaluations by Day</CardTitle>
+                <CardDescription>Number of evaluations per day</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analyticsData?.overviewStats.evaluationsByDay && analyticsData.overviewStats.evaluationsByDay.length > 0 ? (
+                  <Bar data={evaluationsByDayData} />
+                ) : (
+                  <div>No data available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Score Distribution</CardTitle>
+                <CardDescription>Distribution of scores across all evaluations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analyticsData?.overviewStats.scoreDistribution && analyticsData.overviewStats.scoreDistribution.length > 0 ? (
+                  <Bar data={scoreDistributionData} />
+                ) : (
+                  <div>No data available</div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Criteria Averages</CardTitle>
+                <CardDescription>Average score for each evaluation criteria</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {criteriaAverages && criteriaAverages.length > 0 ? (
+                  <Pie data={criteriaPieChartData} />
+                ) : (
+                  <div>No data available</div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold mb-2">Raw Data</h3>
+            {analyticsData?.rawData && analyticsData.rawData.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="border p-2">Ticket ID</th>
+                      <th className="border p-2">Average Score</th>
+                      {/* Add more headers as needed */}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analyticsData.rawData.map((item) => (
+                      <tr key={item.id}>
+                        <td className="border p-2">{item.ticketId}</td>
+                        <td className="border p-2">{item.averageScore}</td>
+                        {/* Add more data cells as needed */}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div>No raw data available</div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
