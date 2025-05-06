@@ -1,3 +1,4 @@
+
 // Import from the new services structure
 import { getAnalyticsData, exportData } from '@/services';
 import { AnalyticsData, AnalyticsFilter, ExportFormat } from '@/types';
@@ -8,34 +9,31 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { CalendarIcon, ArrowDownToLine, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-} from 'chart.js';
-import { Bar, Pie } from 'react-chartjs-2';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
+// Import from recharts instead of chart.js and react-chartjs-2
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
   Tooltip,
   Legend,
-  ArcElement
-);
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts';
 
 const AnalyticsDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [filters, setFilters] = useState<AnalyticsFilter>({
-    startDate: null,
-    endDate: null,
-    category: 'all'
+    dateRange: [null, null],
+    assignees: [],
+    evaluators: [],
+    ticketTypes: [],
+    projects: [],
+    criteriaScoreRanges: {}
   });
   const [isLoading, setIsLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -75,50 +73,22 @@ const AnalyticsDashboard = () => {
   };
 
   // Prepare chart data
-  const evaluationsByDayData = {
-    labels: analyticsData?.overviewStats.evaluationsByDay.map(item => item.date),
-    datasets: [
-      {
-        label: 'Evaluations',
-        data: analyticsData?.overviewStats.evaluationsByDay.map(item => item.count),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      },
-    ],
-  };
+  const evaluationsByDayData = analyticsData?.overviewStats.evaluationsByDay.map(item => ({
+    date: item.date,
+    count: item.count
+  })) || [];
 
-  const scoreDistributionData = {
-    labels: analyticsData?.overviewStats.scoreDistribution.map(item => item.score),
-    datasets: [
-      {
-        label: 'Score Distribution',
-        data: analyticsData?.overviewStats.scoreDistribution.map(item => item.count),
-        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-      },
-    ],
-  };
+  const scoreDistributionData = analyticsData?.overviewStats.scoreDistribution.map(item => ({
+    score: item.score,
+    count: item.count
+  })) || [];
 
   const criteriaAverages = analyticsData?.criteriaStats ? Object.entries(analyticsData.criteriaStats).map(([criteria, data]) => ({
     criteria,
     averageScore: data.averageScore,
   })) : [];
 
-  const criteriaPieChartData = {
-    labels: criteriaAverages?.map(item => item.criteria),
-    datasets: [
-      {
-        label: 'Average Score',
-        data: criteriaAverages?.map(item => item.averageScore),
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.6)',
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(153, 102, 255, 0.6)',
-          'rgba(255, 159, 64, 0.6)',
-        ],
-      },
-    ],
-  };
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   return (
     <div>
@@ -127,10 +97,14 @@ const AnalyticsDashboard = () => {
         <div className="space-x-2">
           <DatePicker
             mode="range"
-            defaultMonth={filters.startDate}
-            onSelect={(date) => handleFilterChange({ startDate: date?.from || null, endDate: date?.to || null })}
+            defaultMonth={new Date()}
+            onSelect={(date) => handleFilterChange({ 
+              dateRange: date ? [date.from, date.to] : [null, null]
+            })}
           />
-          <Select onValueChange={(value) => handleFilterChange({ category: value })}>
+          <Select onValueChange={(value) => handleFilterChange({ 
+            projects: value === 'all' ? [] : [value]
+          })}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
@@ -153,7 +127,10 @@ const AnalyticsDashboard = () => {
               </>
             )}
           </Button>
-          <Select onValueChange={setExportFormat}>
+          <Select 
+            onValueChange={(value) => setExportFormat(value as ExportFormat)}
+            defaultValue={exportFormat}
+          >
             <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="Select format" />
             </SelectTrigger>
@@ -197,8 +174,16 @@ const AnalyticsDashboard = () => {
                 <CardDescription>Number of evaluations per day</CardDescription>
               </CardHeader>
               <CardContent>
-                {analyticsData?.overviewStats.evaluationsByDay && analyticsData.overviewStats.evaluationsByDay.length > 0 ? (
-                  <Bar data={evaluationsByDayData} />
+                {evaluationsByDayData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={evaluationsByDayData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
                   <div>No data available</div>
                 )}
@@ -213,8 +198,16 @@ const AnalyticsDashboard = () => {
                 <CardDescription>Distribution of scores across all evaluations</CardDescription>
               </CardHeader>
               <CardContent>
-                {analyticsData?.overviewStats.scoreDistribution && analyticsData.overviewStats.scoreDistribution.length > 0 ? (
-                  <Bar data={scoreDistributionData} />
+                {scoreDistributionData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={scoreDistributionData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="score" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#00C49F" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
                   <div>No data available</div>
                 )}
@@ -227,8 +220,27 @@ const AnalyticsDashboard = () => {
                 <CardDescription>Average score for each evaluation criteria</CardDescription>
               </CardHeader>
               <CardContent>
-                {criteriaAverages && criteriaAverages.length > 0 ? (
-                  <Pie data={criteriaPieChartData} />
+                {criteriaAverages.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={criteriaAverages}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="averageScore"
+                        nameKey="criteria"
+                        label={({criteria, averageScore}) => `${criteria}: ${averageScore.toFixed(1)}`}
+                      >
+                        {criteriaAverages.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 ) : (
                   <div>No data available</div>
                 )}

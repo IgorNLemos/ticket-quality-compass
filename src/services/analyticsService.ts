@@ -103,6 +103,30 @@ export const getAnalyticsData = async (filters: AnalyticsFilter): Promise<Analyt
     // Apply filters if any
     let filteredEvaluations = [...allEvaluations];
     
+    // Filter by date if dateRange is provided
+    if (filters.dateRange && (filters.dateRange[0] || filters.dateRange[1])) {
+      filteredEvaluations = filteredEvaluations.filter(evaluation => {
+        const evalDate = new Date(evaluation.timestamp);
+        const startOk = !filters.dateRange[0] || evalDate >= filters.dateRange[0];
+        const endOk = !filters.dateRange[1] || evalDate <= filters.dateRange[1];
+        return startOk && endOk;
+      });
+    }
+
+    // Filter by assignees if provided
+    if (filters.assignees && filters.assignees.length > 0) {
+      filteredEvaluations = filteredEvaluations.filter(evaluation => 
+        filters.assignees.includes(evaluation.ticketId)
+      );
+    }
+
+    // Filter by evaluators if provided
+    if (filters.evaluators && filters.evaluators.length > 0) {
+      filteredEvaluations = filteredEvaluations.filter(evaluation => 
+        filters.evaluators.includes(evaluation.evaluatorId)
+      );
+    }
+    
     // Process data for analytics
     const scoreDistribution: Record<number, number> = {};
     const evaluationsByDay: Record<string, number> = {};
@@ -167,9 +191,12 @@ export const getAnalyticsData = async (filters: AnalyticsFilter): Promise<Analyt
       overviewStats: {
         totalEvaluations: filteredEvaluations.length,
         averageScore: calculateAverage(filteredEvaluations.map(e => e.averageScore)),
-        evaluationsByDay: Object.entries(evaluationsByDay).map(([date, count]) => ({ 
-          date, count 
-        })),
+        evaluationsByDay: Object.entries(evaluationsByDay)
+          .sort((a, b) => a[0].localeCompare(b[0]))
+          .map(([date, count]) => ({ 
+            date, 
+            count 
+          })),
         scoreDistribution: Object.entries(scoreDistribution).map(([score, count]) => ({
           score: parseInt(score),
           count
@@ -259,7 +286,7 @@ export const exportData = async (filters: AnalyticsFilter, format: ExportFormat)
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    URL.revoObjectURL(url);
     
   } catch (error) {
     console.error('Error exporting data:', error);
