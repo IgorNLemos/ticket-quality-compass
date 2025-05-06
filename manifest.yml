@@ -1,0 +1,48 @@
+
+name: Ticket Evaluation
+description: A Forge app that allows users to evaluate Jira tickets based on custom criteria and analyze results over time
+version: 1.0.0
+
+modules:
+  jira:globalPage:
+    - key: ticket-evaluation-dashboard
+      title: Ticket Evaluation Dashboard
+      resource: main
+      resolver:
+        function: resolver
+      icon: https://developer.atlassian.com/platform/marketplace/images/icons/evaluation-icon.svg
+      
+  jira:issuePanel:
+    - key: ticket-evaluation-panel
+      resource: issue-panel
+      resolver:
+        function: resolver
+      title: Evaluate Ticket
+      icon: https://developer.atlassian.com/platform/marketplace/images/icons/evaluation-icon.svg
+
+  function:
+    - key: resolver
+      handler: index.handler
+
+resources:
+  - key: main
+    path: build
+    routing: index.html
+
+  - key: issue-panel
+    path: build
+    routing: index.html
+
+app:
+  id: com.ticket-evaluation.app
+
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - storage:app
+    - read:user:jira
+  content:
+    styles:
+      - unsafe-inline
+
