@@ -1,4 +1,3 @@
-
 import { AnalyticsData, AnalyticsFilter, ExportFormat } from '../types';
 import { USE_MOCK_DATA, calculateAverage, convertToCSV } from './utils/storageUtils';
 import { getAllEvaluations } from './evaluationService';
@@ -286,7 +285,7 @@ export const exportData = async (filters: AnalyticsFilter, format: ExportFormat)
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revoObjectURL(url);
+    URL.revokeObjectURL(url);  // Fixed: Changed from revoObjectURL to revokeObjectURL
     
   } catch (error) {
     console.error('Error exporting data:', error);
