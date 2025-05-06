@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { TicketEvaluation } from '@/types';
-import { getEvaluationHistory } from '@/services/apiService';
+import { getEvaluationHistory } from '@/services';
 import { 
   Dialog, 
   DialogContent, 

@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CriteriaManager from '@/components/admin/CriteriaManager';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import { EvaluationCriteria } from '@/types';
-import { getEvaluationCriteria } from '@/services/apiService';
+import { getEvaluationCriteria } from '@/services';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 

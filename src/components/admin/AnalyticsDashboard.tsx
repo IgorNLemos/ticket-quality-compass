@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { AnalyticsFilter, AnalyticsData, ExportFormat } from '@/types';
-import { getAnalyticsData, exportData } from '@/services/apiService';
+import { getAnalyticsData, exportData } from '@/services';
 import OverviewTab from './analytics/OverviewTab';
 import CriteriaTab from './analytics/CriteriaTab';
 import AssigneeTab from './analytics/AssigneeTab';

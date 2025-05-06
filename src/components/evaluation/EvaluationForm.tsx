@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { TicketMetadata, TicketEvaluation, EvaluationCriteria } from '@/types';
-import { getTicketData, getEvaluationCriteria, getExistingEvaluation, saveEvaluation } from '@/services/apiService';
+import { getTicketData, getEvaluationCriteria, getExistingEvaluation, saveEvaluation } from '@/services';
 import { Loader2 } from 'lucide-react';
 
 interface EvaluationFormProps {
