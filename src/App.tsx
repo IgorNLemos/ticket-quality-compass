@@ -30,8 +30,10 @@ const ModuleRouter = () => {
   // Render the appropriate component based on the module key
   switch (moduleKey) {
     case 'ticket-evaluation-dashboard':
+    case 'admin-page':  // Support both key formats
       return <AdminView />;
     case 'ticket-evaluation-panel':
+    case 'issue-panel':  // Support both key formats
       return <IssuePanelView />;
     default:
       // Show the NotFound view with information about the missing module

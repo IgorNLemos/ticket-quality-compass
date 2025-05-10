@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { view } from '@forge/bridge';
 
 interface JiraUser {
   id: string;
@@ -44,72 +45,95 @@ export const JiraProvider: React.FC<JiraProviderProps> = ({ children }) => {
       try {
         setIsLoading(true);
         
-        // Check if running in Jira
-        const inJira = typeof window !== 'undefined' && Boolean(window.AP);
+        // Check if we're in a Forge environment
+        const inJira = typeof window !== 'undefined' && (Boolean(window.AP) || Boolean(window.ForgeData));
         setIsJira(inJira);
         
-        // First try to get module key from forge data
         try {
-          if (window.ForgeData?.data?.moduleKey) {
-            setModuleKey(window.ForgeData.data.moduleKey);
-            console.log('Module key from Forge data:', window.ForgeData.data.moduleKey);
+          // Use @forge/bridge to get context
+          const context = await view.getContext();
+          console.log('Context from @forge/bridge:', context);
+          
+          if (context && context.moduleKey) {
+            setModuleKey(context.moduleKey);
+            console.log('Module key from Forge bridge:', context.moduleKey);
+            
+            // If we have issue context, set it
+            if (context.extension && context.extension.issue && context.extension.issue.id) {
+              setContextIssueId(context.extension.issue.id);
+              console.log('Issue ID from context:', context.extension.issue.id);
+            }
           }
-        } catch (err) {
-          console.warn('Unable to get Forge module key', err);
-        }
-        
-        // If no module key was found, try to determine from URL for development purposes
-        if (!moduleKey) {
+        } catch (bridgeErr) {
+          console.warn('Unable to get context from @forge/bridge:', bridgeErr);
+          
+          // Fallback to ForgeData if bridge fails
+          try {
+            if (window.ForgeData?.data?.moduleKey) {
+              setModuleKey(window.ForgeData.data.moduleKey);
+              console.log('Module key from ForgeData fallback:', window.ForgeData.data.moduleKey);
+            }
+          } catch (forgeDataErr) {
+            console.warn('Unable to get ForgeData moduleKey:', forgeDataErr);
+          }
+          
           // Development fallbacks for easier testing
-          if (window.location.pathname.includes('issue-panel') || window.location.search.includes('panel')) {
-            setModuleKey('ticket-evaluation-panel');
-            console.log('Using issue panel module key from URL pattern');
-          } else if (window.location.pathname.includes('admin') || window.location.search.includes('admin')) {
-            setModuleKey('ticket-evaluation-dashboard');
-            console.log('Using admin dashboard module key from URL pattern');
-          } else {
-            // Default to admin view for local development with no specific route
-            setModuleKey('ticket-evaluation-dashboard');
-            console.log('Setting default module key for development');
+          if (!moduleKey) {
+            if (window.location.search.includes('panel=true')) {
+              setModuleKey('ticket-evaluation-panel');
+              console.log('Using issue panel module key from URL parameter');
+            } else if (window.location.search.includes('admin=true')) {
+              setModuleKey('ticket-evaluation-dashboard');
+              console.log('Using admin dashboard module key from URL parameter');
+            } else {
+              // Default to admin view for local development
+              setModuleKey('ticket-evaluation-dashboard');
+              console.log('Setting default module key for development');
+            }
           }
         }
         
         if (!inJira) {
           // Not in Jira, set to development mode
+          console.log('Not running in Jira environment, setting development mode');
           setIsLoading(false);
           return;
         }
         
-        // Initialize the Jira AP client
-        window.AP.context.getToken(async (token: string) => {
-          // Get the current issue context
-          window.AP.context.getContext(async (context: any) => {
-            if (context && context.issueId) {
-              setContextIssueId(context.issueId);
-            }
-            
-            try {
-              // Get current user
-              const response = await window.AP.request({
-                url: '/rest/api/3/myself',
-                type: 'GET'
-              });
+        // Initialize the Jira AP client if available
+        if (window.AP) {
+          window.AP.context.getToken(async (token: string) => {
+            // Get the current issue context
+            window.AP.context.getContext(async (context: any) => {
+              if (context && context.issueId) {
+                setContextIssueId(context.issueId);
+              }
               
-              const userData = JSON.parse(response.body);
-              
-              setCurrentUser({
-                id: userData.accountId,
-                displayName: userData.displayName,
-                avatarUrl: userData.avatarUrls['24x24']
-              });
-            } catch (err) {
-              console.error('Error fetching current user:', err);
-              setError(err instanceof Error ? err : new Error('Failed to fetch user data'));
-            } finally {
-              setIsLoading(false);
-            }
+              try {
+                // Get current user
+                const response = await window.AP.request({
+                  url: '/rest/api/3/myself',
+                  type: 'GET'
+                });
+                
+                const userData = JSON.parse(response.body);
+                
+                setCurrentUser({
+                  id: userData.accountId,
+                  displayName: userData.displayName,
+                  avatarUrl: userData.avatarUrls['24x24']
+                });
+              } catch (err) {
+                console.error('Error fetching current user:', err);
+                setError(err instanceof Error ? err : new Error('Failed to fetch user data'));
+              } finally {
+                setIsLoading(false);
+              }
+            });
           });
-        });
+        } else {
+          setIsLoading(false);
+        }
       } catch (err) {
         console.error('Error initializing Jira context:', err);
         setError(err instanceof Error ? err : new Error('Failed to initialize Jira context'));
