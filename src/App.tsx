@@ -34,16 +34,8 @@ const ModuleRouter = () => {
     case 'ticket-evaluation-panel':
       return <IssuePanelView />;
     default:
-      // For development or when moduleKey is unknown, try to infer from URL
-      if (window.location.pathname.includes('issue-panel')) {
-        return <IssuePanelView />;
-      } else if (window.location.pathname.includes('admin')) {
-        return <AdminView />;
-      } else {
-        // Default to admin view for local development
-        console.warn('Unknown module key, defaulting to NotFound view');
-        return <NotFound />;
-      }
+      // Show the NotFound view with information about the missing module
+      return <NotFound />;
   }
 };
 

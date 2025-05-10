@@ -48,15 +48,30 @@ export const JiraProvider: React.FC<JiraProviderProps> = ({ children }) => {
         const inJira = typeof window !== 'undefined' && Boolean(window.AP);
         setIsJira(inJira);
         
-        // Try to get module key from forge data
+        // First try to get module key from forge data
         try {
-          const forgeData = (window as any)?.ForgeData?.data;
-          if (forgeData && forgeData.moduleKey) {
-            setModuleKey(forgeData.moduleKey);
-            console.log('Module key from Forge data:', forgeData.moduleKey);
+          if (window.ForgeData?.data?.moduleKey) {
+            setModuleKey(window.ForgeData.data.moduleKey);
+            console.log('Module key from Forge data:', window.ForgeData.data.moduleKey);
           }
         } catch (err) {
           console.warn('Unable to get Forge module key', err);
+        }
+        
+        // If no module key was found, try to determine from URL for development purposes
+        if (!moduleKey) {
+          // Development fallbacks for easier testing
+          if (window.location.pathname.includes('issue-panel') || window.location.search.includes('panel')) {
+            setModuleKey('ticket-evaluation-panel');
+            console.log('Using issue panel module key from URL pattern');
+          } else if (window.location.pathname.includes('admin') || window.location.search.includes('admin')) {
+            setModuleKey('ticket-evaluation-dashboard');
+            console.log('Using admin dashboard module key from URL pattern');
+          } else {
+            // Default to admin view for local development with no specific route
+            setModuleKey('ticket-evaluation-dashboard');
+            console.log('Setting default module key for development');
+          }
         }
         
         if (!inJira) {
