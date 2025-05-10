@@ -3,13 +3,49 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import IssuePanelView from "./pages/IssuePanelView";
 import AdminView from "./pages/AdminView";
 import { JiraProvider } from "./contexts/JiraContext";
+import { useJira } from "./contexts/JiraContext";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+// ModuleRouter handles displaying the correct component based on the Jira module key
+const ModuleRouter = () => {
+  const { isLoading, moduleKey } = useJira();
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  // Log the module key for debugging
+  console.log('Current module key:', moduleKey);
+  
+  // Render the appropriate component based on the module key
+  switch (moduleKey) {
+    case 'ticket-evaluation-dashboard':
+      return <AdminView />;
+    case 'ticket-evaluation-panel':
+      return <IssuePanelView />;
+    default:
+      // For development or when moduleKey is unknown, try to infer from URL
+      if (window.location.pathname.includes('issue-panel')) {
+        return <IssuePanelView />;
+      } else if (window.location.pathname.includes('admin')) {
+        return <AdminView />;
+      } else {
+        // Default to admin view for local development
+        console.warn('Unknown module key, defaulting to NotFound view');
+        return <NotFound />;
+      }
+  }
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,15 +53,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Navigate to="/admin" replace />} />
-            <Route path="/issue-panel" element={<IssuePanelView />} />
-            <Route path="/admin" element={<AdminView />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <ModuleRouter />
       </TooltipProvider>
     </JiraProvider>
   </QueryClientProvider>

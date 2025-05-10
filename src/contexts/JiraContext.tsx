@@ -12,6 +12,7 @@ interface JiraContextType {
   isLoading: boolean;
   currentUser: JiraUser | null;
   contextIssueId: string | null;
+  moduleKey: string | null;
   error: Error | null;
 }
 
@@ -20,6 +21,7 @@ const JiraContext = createContext<JiraContextType>({
   isLoading: true,
   currentUser: null,
   contextIssueId: null,
+  moduleKey: null,
   error: null
 });
 
@@ -34,6 +36,7 @@ export const JiraProvider: React.FC<JiraProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<JiraUser | null>(null);
   const [contextIssueId, setContextIssueId] = useState<string | null>(null);
+  const [moduleKey, setModuleKey] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,17 @@ export const JiraProvider: React.FC<JiraProviderProps> = ({ children }) => {
         // Check if running in Jira
         const inJira = typeof window !== 'undefined' && Boolean(window.AP);
         setIsJira(inJira);
+        
+        // Try to get module key from forge data
+        try {
+          const forgeData = (window as any)?.ForgeData?.data;
+          if (forgeData && forgeData.moduleKey) {
+            setModuleKey(forgeData.moduleKey);
+            console.log('Module key from Forge data:', forgeData.moduleKey);
+          }
+        } catch (err) {
+          console.warn('Unable to get Forge module key', err);
+        }
         
         if (!inJira) {
           // Not in Jira, set to development mode
@@ -96,6 +110,7 @@ export const JiraProvider: React.FC<JiraProviderProps> = ({ children }) => {
     isLoading,
     currentUser,
     contextIssueId,
+    moduleKey,
     error
   };
 
